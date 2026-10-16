@@ -3,7 +3,7 @@
 # 	Module:       main.py                                                      #
 # 	Author:       viraa                                                        #
 # 	Created:      10/15/2026, 10:06:25 PM                                       #
-# 	Description:  Pinnacle claw bot - v16 (= v14 code, VEXcode file fixed)   #
+# 	Description:  Pinnacle claw bot - v17 (v12 snap turns + TURN_KD 0.02)  #
 #                                                                              #
 # ---------------------------------------------------------------------------- #
 
@@ -97,7 +97,7 @@ DRIVE_DISTANCE_SCALE = 1.116  # [YOU] DRIVE24 test went 21.5 in for 24 commanded
 # ---- turn (auton_turn + snaps: quintic turn on the IMU) ----
 TURN_KP = 0.25                # [GUESS] volts per degree of heading error. Raise: snappier, finishes the last degrees. Too high: overshoots / wobbles.
 TURN_KI = 0.0                 # [GUESS] off. Only acts after the turn profile ends. Raise a tiny bit (0.01) ONLY if turns always stop 1-2 deg short.
-TURN_KD = 0.03                # [YOU] v12 was 0.02. Volts per deg/s. Raise: kills wobble/overshoot at the end. Too high: sluggish or buzzy.
+TURN_KD = 0.02                # [YOU] v17: back to v12's 0.02 (0.03 undershot in the Oct 16 TUNE test). Volts per deg/s. Raise: kills wobble/overshoot at the end. Too high: sluggish or buzzy.
 TURN_TOL_DEG = 1.0            # [SPEC] turn "done" within this many degrees (0.5-1). Lower: more accurate, slower.
 TURN_SETTLE_DPS = 5.0         # [GUESS] ... and turning slower than this (deg/s).
 # ---- shared ----
@@ -182,9 +182,9 @@ HEADING_HOLD_MIN_SPEED = 2.0  # [GUESS] in/s, below this (and stick centered) ho
 
 # ---------- SNAP TURNS (Fn + Left / Fn + Right) ----------
 SNAP_DEG = 90                 # [YOU] snap size
-SNAP_MAX_DPS = 250.0          # [YOU] peak turn rate (v12: 350, same as auton turns). Lower = smoother snap
+SNAP_MAX_DPS = 350.0          # [YOU] v17: back to v12's 350 (v13-v16 had 250). Peak snap turn rate, same as auton turns
 TURN_TRACTION_ACCEL_DPS2 = A_TRACTION / (TRACK_WIDTH / 2) * 180 / math.pi   # [MATH] traction-limited, ~2390 deg/s^2 (auton turns still use all of it)
-SNAP_ACCEL_SCALE = 0.6        # [YOU] snaps use 60% of the traction limit (smoother starts/stops)
+SNAP_ACCEL_SCALE = 1.0        # [YOU] v17: back to v12 (full traction limit). v13-v16 had 0.6
 SNAP_MAX_ACCEL_DPS2 = TURN_TRACTION_ACCEL_DPS2 * SNAP_ACCEL_SCALE        # [MATH] ~1430 deg/s^2
 
 # ---------- AUTON: drives (spec section 2, S-curve) ----------
