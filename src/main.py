@@ -3,7 +3,7 @@
 # 	Module:       main.py                                                      #
 # 	Author:       viraa                                                        #
 # 	Created:      10/15/2026, 10:06:25 PM                                       #
-# 	Description:  Pinnacle claw bot - v15 (= v14 code, VEXcode file fixed)   #
+# 	Description:  Pinnacle claw bot - v16 (= v14 code, VEXcode file fixed)   #
 #                                                                              #
 # ---------------------------------------------------------------------------- #
 
