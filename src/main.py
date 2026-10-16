@@ -3,7 +3,7 @@
 # 	Module:       main.py                                                      #
 # 	Author:       viraa                                                        #
 # 	Created:      10/15/2026, 10:06:25 PM                                       #
-# 	Description:  Pinnacle claw bot - v19 (softer driver braking)          #
+# 	Description:  Pinnacle claw bot - v20 (brake 0.7, lift stop, no enc PID) #
 #                                                                              #
 # ---------------------------------------------------------------------------- #
 
@@ -87,6 +87,8 @@ KEEP_R2_SPINNER = False       # [YOU] R2 is now precision/Fn. True brings back v
 # How both PIDs work: volts = kV*v_ref + kA*a_ref + kS + kP*(position error) + kD*(speed error)
 #   kV/kA/kS (feedforward, below in CONFIG) do most of the work; kP/kD only clean up what's left.
 # ---- drive (auton_drive: S-curve on averaged drive encoders) ----
+DRIVE_ENCODER_PID = False     # [YOU] v20: False = auton drives use NO motor-encoder PID (you said forward/back wasn't accurate).
+                              # Drives follow the planned speed (feedforward) + the IMU heading PID only, and end when the plan ends. True = v12-v19 behavior.
 DRIVE_KP = 0.8                # [GUESS] volts per inch behind/ahead. Raise: holds the planned path tighter, finishes closer. Too high: buzzes / rocks at the end.
 DRIVE_KD = 0.05               # [GUESS] volts per in/s of speed error. Raise: damps the rock/overshoot at the stop. Too high: jittery.
 DRIVE_HEADING_KP = 0.15       # [GUESS] volts per degree off-heading while driving. Raise: drives straighter. Too high: wiggles side to side.
@@ -137,8 +139,8 @@ KAPPA_BRAKE = 0.6             # [SPEC] kappa_b (spec gives no separate number, s
 A_MOTOR = (6 * 0.35 / DRIVE_GEAR_RATIO / (WHEEL_DIAMETER / 2 * 0.0254)) / (ROBOT_WEIGHT_LB * 0.4536) / 0.0254   # [MATH] in/s^2, ~392 at 15 lb
 A_TRACTION = KAPPA * MU * G_IN_S2                                                       # [MATH] ~208 in/s^2
 A_BRAKE = min(KAPPA_BRAKE * MU * G_IN_S2, G_IN_S2 * CG_TIP_RATIO)                       # [MATH] spec braking cap min(kappa_b*mu*g, g*d/h)
-DRIVER_BRAKE_SCALE = 0.3      # [GUESS] v19: DRIVER CONTROL ONLY. Stopping when you let go of the sticks uses this fraction of A_BRAKE.
-                              # 1.0 = v12-v18 (stops hard, felt like HOLD). 0.3 = ~3x softer/longer glide to a stop. Lower = softer. Auton/macros unchanged.
+DRIVER_BRAKE_SCALE = 0.7      # [YOU] v20: 0.7 (v19 had 0.3 by mistake). DRIVER CONTROL ONLY. Stopping when you let go of the sticks uses this fraction of A_BRAKE.
+                              # 1.0 = v12-v18 (stops hard, felt like HOLD). Lower = softer glide. Auton/macros unchanged.
 A_LAT = KAPPA * MU * G_IN_S2  # [GUESS] lateral accel limit for turn authority |w*| <= a_lat/|v| (spec gives no number; same traction budget)
 
 # ---------- feedforward (volts) ----------
@@ -221,6 +223,8 @@ LIFT_DEG_PER_INCH = 64        # [YOU] lift motor degrees per inch: measured 320 
 LIFT_MAX_DEGREES = 900        # [v11] top limit, same 900 that driver control uses
 LIFT_DOWN_SPEED = 50          # [v11] % speed for auton lift DOWN
 LIFT_DRIVER_SPEED = 50        # [v11] % lift speed while L1/L2 is held (same 50 as v11)
+LIFT_BRAKE_SCALE = 0.7        # [YOU] v20: how hard the lift stops when you let go of L1/L2. 1.0 = instant HOLD (v11 slam). 0.0 = v13-v19 0.2 s ramp (felt like coast).
+                              # 0.7 = ramp down over 0.2 x (1 - 0.7) = 0.06 s, then HOLD. Raise toward 1.0 = firmer stop. Lower = softer.
 LIFT_RAMP_SEC = 0.2           # [GUESS] v13: L1/L2 ramp the lift 0 -> 50% over this on press, and 50% -> 0 on release, THEN hold (no slam stop)
 
 # ---------- tip guard (v13) ----------
@@ -746,15 +750,19 @@ def auton_drive(inches):
         x = (drive_position_in() - x0) * direction
         v = drive_speed_in_s() * direction
         ks = KS * sgn(v_ref)
-        if i >= n and abs(abs(inches) - x) > DRIVE_TOL_IN:
+        if DRIVE_ENCODER_PID and i >= n and abs(abs(inches) - x) > DRIVE_TOL_IN:
             ks = KS * sgn(abs(inches) - x)   # settle: push past static friction so the PID can finish the last fraction of an inch
-        volts = KV * v_ref + KA * a_ref + ks + DRIVE_KP * (x_ref - x) + DRIVE_KD * (v_ref - v)
+        volts = KV * v_ref + KA * a_ref + ks
+        if DRIVE_ENCODER_PID:
+            volts += DRIVE_KP * (x_ref - x) + DRIVE_KD * (v_ref - v)
         volts *= direction
         h = 0.0
         if imu_ok:
             h = clamp(DRIVE_HEADING_KP * wrap180(heading - imu_rot()), -DRIVE_HEADING_MAX_V, DRIVE_HEADING_MAX_V)
         set_drive_volts(volts + h, volts - h)
-        if i >= n and abs(abs(inches) - x) < DRIVE_TOL_IN and abs(v) < DRIVE_SETTLE_SPEED:
+        if not DRIVE_ENCODER_PID and i >= n:
+            good = SETTLE_LOOPS   # v20: no encoder check; done when the plan ends
+        elif i >= n and abs(abs(inches) - x) < DRIVE_TOL_IN and abs(v) < DRIVE_SETTLE_SPEED:
             good += 1
         else:
             good = 0
@@ -1245,7 +1253,13 @@ lift_ramp_id = 0       # bumped on every L1/L2 press/release so an older ramp lo
 
 def lift_ramp_toward(current, target, dt):
     # move current toward target by at most LIFT_DRIVER_SPEED per LIFT_RAMP_SEC
-    step = LIFT_DRIVER_SPEED * dt / LIFT_RAMP_SEC
+    # v20: ramping DOWN to 0 (letting go) is faster, set by LIFT_BRAKE_SCALE
+    ramp = LIFT_RAMP_SEC
+    if target == 0:
+        ramp = LIFT_RAMP_SEC * (1.0 - LIFT_BRAKE_SCALE)
+    if ramp <= 0.001:
+        return target
+    step = LIFT_DRIVER_SPEED * dt / ramp
     if current < target:
         return min(target, current + step)
     return max(target, current - step)
