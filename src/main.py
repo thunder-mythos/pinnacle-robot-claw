@@ -3,7 +3,7 @@
 # 	Module:       main.py                                                      #
 # 	Author:       viraa                                                        #
 # 	Created:      10/15/2026, 10:06:25 PM                                       #
-# 	Description:  Pinnacle claw bot - v18 (auton 1st forward 38 in)        #
+# 	Description:  Pinnacle claw bot - v19 (softer driver braking)          #
 #                                                                              #
 # ---------------------------------------------------------------------------- #
 
@@ -137,6 +137,8 @@ KAPPA_BRAKE = 0.6             # [SPEC] kappa_b (spec gives no separate number, s
 A_MOTOR = (6 * 0.35 / DRIVE_GEAR_RATIO / (WHEEL_DIAMETER / 2 * 0.0254)) / (ROBOT_WEIGHT_LB * 0.4536) / 0.0254   # [MATH] in/s^2, ~392 at 15 lb
 A_TRACTION = KAPPA * MU * G_IN_S2                                                       # [MATH] ~208 in/s^2
 A_BRAKE = min(KAPPA_BRAKE * MU * G_IN_S2, G_IN_S2 * CG_TIP_RATIO)                       # [MATH] spec braking cap min(kappa_b*mu*g, g*d/h)
+DRIVER_BRAKE_SCALE = 0.3      # [GUESS] v19: DRIVER CONTROL ONLY. Stopping when you let go of the sticks uses this fraction of A_BRAKE.
+                              # 1.0 = v12-v18 (stops hard, felt like HOLD). 0.3 = ~3x softer/longer glide to a stop. Lower = softer. Auton/macros unchanged.
 A_LAT = KAPPA * MU * G_IN_S2  # [GUESS] lateral accel limit for turn authority |w*| <= a_lat/|v| (spec gives no number; same traction budget)
 
 # ---------- feedforward (volts) ----------
@@ -943,8 +945,8 @@ def new_driver_loop():
     dt = LOOP_MS / 1000.0
     turn_a_trac = side_to_dps(A_TRACTION)
     turn_a_motor = side_to_dps(A_MOTOR)
-    turn_a_brake = side_to_dps(A_BRAKE)
-    drive_sh = Shaper(A_TRACTION, A_MOTOR, A_BRAKE, V_FREE)
+    turn_a_brake = side_to_dps(A_BRAKE * DRIVER_BRAKE_SCALE)   # v19: softer stop
+    drive_sh = Shaper(A_TRACTION, A_MOTOR, A_BRAKE * DRIVER_BRAKE_SCALE, V_FREE)   # v19: softer stop
     turn_sh = Shaper(turn_a_trac, turn_a_motor, turn_a_brake, TURN_FREE_DPS)
     drive_L = Ceiling(DRIVE_L0, DRIVE_UNLOCK_IN)
     turn_L = Ceiling(TURN_L0, TURN_UNLOCK_DEG)
