@@ -71,7 +71,32 @@ MaxSpeed = 0
 USE_NEW_DRIVE = True          # True = v12 driver pipeline (expo, unlock, precision, shaper, heading hold, snaps). False = your exact v11 arcade mapping.
 USE_NEW_AUTON = True          # True = auton moves use S-curve drives + IMU quintic turns. False = your v11 spin_for moves (no IMU).
 AUTON_TEST = "NONE"           # "NONE" = run the real auton. "DRIVE24" = auton only drives 24 in and prints the result. "TURN90" = auton only turns 90 right and prints the IMU heading.
+                              # v13: "TUNE" = drive 24, turn 90, turn -90, drive -24, printing distance + heading error after each (PID tuning).
 KEEP_R2_SPINNER = False       # [YOU] R2 is now precision/Fn. True brings back v11's R2 = spin RearSpinner FORWARD (it will ALSO trigger precision/Fn).
+
+# ======================= TUNING - edit here (v13: every PID knob in one place) =======================
+# Field tuning: set AUTON_TEST = "TUNE", run auton, read the errors on the controller/brain, change ONE number, repeat.
+# Order: TURN_KP -> TURN_KD, then DRIVE_KP -> DRIVE_KD, then DRIVE_HEADING_KP. (Full plan in v13_PID_and_Tuning.pdf.)
+# How both PIDs work: volts = kV*v_ref + kA*a_ref + kS + kP*(position error) + kD*(speed error)
+#   kV/kA/kS (feedforward, below in CONFIG) do most of the work; kP/kD only clean up what's left.
+# ---- drive (auton_drive: S-curve on averaged drive encoders) ----
+DRIVE_KP = 0.8                # [GUESS] volts per inch behind/ahead. Raise: holds the planned path tighter, finishes closer. Too high: buzzes / rocks at the end.
+DRIVE_KD = 0.05               # [GUESS] volts per in/s of speed error. Raise: damps the rock/overshoot at the stop. Too high: jittery.
+DRIVE_HEADING_KP = 0.15       # [GUESS] volts per degree off-heading while driving. Raise: drives straighter. Too high: wiggles side to side.
+DRIVE_HEADING_MAX_V = 3.0     # [GUESS] cap on heading correction volts. Raise only if it still drifts with a high DRIVE_HEADING_KP.
+DRIVE_TOL_IN = 0.25           # [SPEC] "done" when within this many inches ... Lower: more accurate, slower to finish.
+DRIVE_SETTLE_SPEED = 1.0      # [GUESS] ... and slower than this (in/s). Lower: waits for a fuller stop.
+DRIVE_DISTANCE_SCALE = 1.116  # [YOU] DRIVE24 test went 21.5 in for 24 commanded: 24 / 21.5 = 1.116. Encoder inches are divided by this so commanded inches = real inches. 1.0 = off.
+# ---- turn (auton_turn + snaps: quintic turn on the IMU) ----
+TURN_KP = 0.25                # [GUESS] volts per degree of heading error. Raise: snappier, finishes the last degrees. Too high: overshoots / wobbles.
+TURN_KI = 0.0                 # [GUESS] off. Only acts after the turn profile ends. Raise a tiny bit (0.01) ONLY if turns always stop 1-2 deg short.
+TURN_KD = 0.03                # [YOU] v12 was 0.02. Volts per deg/s. Raise: kills wobble/overshoot at the end. Too high: sluggish or buzzy.
+TURN_TOL_DEG = 1.0            # [SPEC] turn "done" within this many degrees (0.5-1). Lower: more accurate, slower.
+TURN_SETTLE_DPS = 5.0         # [GUESS] ... and turning slower than this (deg/s).
+# ---- shared ----
+SETTLE_LOOPS = 5              # [GUESS] must be "done" this many 10 ms loops in a row (drives and turns). Raise: surer stop, slower.
+SETTLE_MARGIN_SEC = 0.5       # [GUESS] timeout = planned move time + this. A stuck move gives up after this, so auton keeps going.
+# ======================================================================================================
 
 # ---------- BUTTONS (names: "A","B","X","Y","Up","Down","Left","Right","L1","L2","R1","R2") ----------
 PRECISION_BUTTON = "R2"       # [YOU] HOLD for precision ("DPI drop")
@@ -124,7 +149,7 @@ TURN_EXPO_PRECISION = 0.40    # [SPEC] k, turn while precision held
 
 # ---------- DRIVER: range ceiling L (spec section 2) ----------
 DRIVE_L0 = 0.65               # [SPEC] base ceiling, drive
-TURN_L0 = 0.40                # [SPEC] base ceiling, turn
+TURN_L0 = 0.55                # [YOU] base ceiling, turn (v12: 0.40 felt too slow). Moderate bump, ~1.4x, proportional to TURN_PRECISION's
 DRIVE_UNLOCK_IN = 18.0        # [SPEC] s_u drive: inches of committed full-stick travel to reach 100%
 TURN_UNLOCK_DEG = 25.0        # [SPEC] s_u turn: degrees of committed full-stick rotation to reach 100%
 STROKE_START = 0.85           # [SPEC] |f| above this starts a full-deflection stroke
@@ -135,7 +160,7 @@ DRIVER_TURN_MAX = TURN_FREE_DPS  # [MATH] "max" for turn, deg/s
 
 # ---------- DRIVER: precision hold (spec section 2) ----------
 DRIVE_PRECISION = 0.30        # [SPEC] P drive while held (auto-unlock off, so drive max = 0.30 x 0.65 = 20%)
-TURN_PRECISION = 0.25         # [SPEC] P turn while held (turn max = 0.25 x 0.40 = 10%)
+TURN_PRECISION = 0.35         # [YOU] P turn while held (v12: 0.25 -> Fn turn max 10%, didn't move). Now turn max = 0.35 x 0.55 = 19%
 
 # ---------- DRIVER: shaper (spec section 3) ----------
 WN_UP = 17.5                  # [SPEC] rad/s, 15-20 -> middle
@@ -150,8 +175,10 @@ HEADING_HOLD_MIN_SPEED = 2.0  # [GUESS] in/s, below this (and stick centered) ho
 
 # ---------- SNAP TURNS (Fn + Left / Fn + Right) ----------
 SNAP_DEG = 90                 # [YOU] snap size
-SNAP_MAX_DPS = 350.0          # [GUESS] peak turn rate (same as auton turns)
-SNAP_MAX_ACCEL_DPS2 = A_TRACTION / (TRACK_WIDTH / 2) * 180 / math.pi   # [MATH] traction-limited, ~2390 deg/s^2
+SNAP_MAX_DPS = 250.0          # [YOU] peak turn rate (v12: 350, same as auton turns). Lower = smoother snap
+TURN_TRACTION_ACCEL_DPS2 = A_TRACTION / (TRACK_WIDTH / 2) * 180 / math.pi   # [MATH] traction-limited, ~2390 deg/s^2 (auton turns still use all of it)
+SNAP_ACCEL_SCALE = 0.6        # [YOU] snaps use 60% of the traction limit (smoother starts/stops)
+SNAP_MAX_ACCEL_DPS2 = TURN_TRACTION_ACCEL_DPS2 * SNAP_ACCEL_SCALE        # [MATH] ~1430 deg/s^2
 
 # ---------- AUTON: drives (spec section 2, S-curve) ----------
 AUTON_DRIVE_SPEED = 25        # [v11] % speed for forward/backward moves in auton
@@ -159,25 +186,14 @@ AUTON_TURN_SPEED = AUTON_DRIVE_SPEED  # [v11] used only by USE_NEW_AUTON = False
 AUTON_V_MAX = AUTON_DRIVE_SPEED / 100.0 * V_FREE   # [MATH] 25% of 76.6 = 19.1 in/s (same top speed as v11). Spec allows up to 85-90% of V_FREE.
 AUTON_ACCEL = A_TRACTION      # [SPEC] 50-70% of mu*g
 AUTON_JERK_TIME = 0.10        # [GUESS] T_j = a/j_max, seconds of corner rounding (spec gives the method, not the number)
-DRIVE_KP = 0.8                # [GUESS] volts per inch of position error
-DRIVE_KD = 0.05               # [GUESS] volts per in/s of speed error
-DRIVE_HEADING_KP = 0.15       # [GUESS] volts per degree of heading error during auton drives
-DRIVE_HEADING_MAX_V = 3.0     # [GUESS] cap on heading correction volts
-DRIVE_TOL_IN = 0.25           # [SPEC] stop when within 0.25 in ...
-DRIVE_SETTLE_SPEED = 1.0      # [GUESS] ... and slower than 1 in/s ...
-SETTLE_LOOPS = 5              # [GUESS] ... for 5 loops (50 ms) in a row (drives and turns)
-SETTLE_MARGIN_SEC = 0.5       # [GUESS] timeout = profile time + this (replaces v11's flat 3 s for drives)
+# v13: DRIVE_KP, DRIVE_KD, DRIVE_HEADING_KP/MAX_V, DRIVE_TOL_IN, DRIVE_SETTLE_SPEED, SETTLE_LOOPS, SETTLE_MARGIN_SEC moved to TUNING at the top
 
 # ---------- AUTON: turns (spec section 1, quintic) ----------
 # Quintic peaks at 1.875x its average rate, so to keep the turn-around about as quick as v11 (~0.95 s)
 # the peak must be ~1.875 x 180 / 0.97 s = ~350 deg/s.
 AUTON_TURN_MAX_DPS = 350.0    # [GUESS/MATH] omega_max for T = max(1.875*dth/w_max, sqrt(5.77*dth/a_max))
-AUTON_TURN_ACCEL_DPS2 = SNAP_MAX_ACCEL_DPS2   # [MATH] alpha_max, traction-limited
-TURN_KP = 0.25                # [GUESS] volts per degree of heading error
-TURN_KI = 0.0                 # [GUESS] off; only acts after the profile ends
-TURN_KD = 0.02                # [GUESS] volts per deg/s (spec: small Kd to damp the settle)
-TURN_TOL_DEG = 1.0            # [SPEC] 0.5-1 deg
-TURN_SETTLE_DPS = 5.0         # [GUESS] "low rate" for the exit check
+AUTON_TURN_ACCEL_DPS2 = TURN_TRACTION_ACCEL_DPS2   # [MATH] alpha_max, traction-limited (v13: unchanged value; snaps alone got slower)
+# v13: TURN_KP, TURN_KI, TURN_KD, TURN_TOL_DEG, TURN_SETTLE_DPS moved to TUNING at the top
 
 # ---------- driver (USE_NEW_DRIVE = False only) ----------
 DRIVER_DRIVE_SPEED = 0.6      # [v11] driver control: forward/backward = 60%
@@ -192,9 +208,16 @@ AUTON_PAUSE_MS = 800          # [v11] pause after every auton step, ms (auton mu
 TURN_DEG_PER_ROBOT_DEG = 851.0 / 180.0   # [MATH] 4.73 drive motor degrees per robot degree (only used for v11-style turns and old motor-degree calls)
 
 # ---------- lift ----------
-LIFT_DEG_PER_INCH = 50        # [v11] lift motor degrees per inch of lift height (PLACEHOLDER: measure it)
+LIFT_DEG_PER_INCH = 64        # [YOU] lift motor degrees per inch: measured 320 deg / 5 in (v12: 50 placeholder). Re-measure at low lift speed
 LIFT_MAX_DEGREES = 900        # [v11] top limit, same 900 that driver control uses
 LIFT_DOWN_SPEED = 50          # [v11] % speed for auton lift DOWN
+LIFT_DRIVER_SPEED = 50        # [v11] % lift speed while L1/L2 is held (same 50 as v11)
+LIFT_RAMP_SEC = 0.2           # [GUESS] v13: L1/L2 ramp the lift 0 -> 50% over this on press, and 50% -> 0 on release, THEN hold (no slam stop)
+
+# ---------- tip guard (v13) ----------
+TIP_GUARD_LIFT_DEG = 425      # [YOU] lift above this (LiftL1 degrees) = drive (forward/back) is capped. Turning is NOT capped
+TIP_GUARD_DRIVE_SCALE = 0.50  # [YOU] drive gets 50% of its normal output while the guard is on
+TIP_GUARD_RELEASE_DEG = 400   # [GUESS] guard turns off only once the lift is back below this (stops it flickering on/off right at 425)
 
 # ---------- claw ----------
 CLAW_CLOSED_OUTPUT = False    # [v11] PneumaticClaw value that CLOSES the claw
@@ -288,7 +311,7 @@ def clawRotate():
         PuematicRotate.set(False)
         pneumaticRotate = True
 
-def lift_Down_degrees(lift_Down_degrees__degrees):
+def lift_Down_degrees(lift_Down_degrees__degrees, wait_done=True):
     global pneumaticClaw, pneumaticRotate, puematicTilt, SpeedLeft, SpeedRight, MaxSpeed, screen_precision, console_precision, controller_1_precision
     printdegrees()
     LiftR1.set_velocity(LIFT_DOWN_SPEED, PERCENT)
@@ -302,9 +325,9 @@ def lift_Down_degrees(lift_Down_degrees__degrees):
     LiftL1.spin_for(REVERSE, lift_Down_degrees__degrees, DEGREES, wait=False)
     LiftR1.spin_for(REVERSE, lift_Down_degrees__degrees, DEGREES, wait=False)
     LiftL2.spin_for(REVERSE, lift_Down_degrees__degrees, DEGREES, wait=False)
-    LiftR2.spin_for(REVERSE, lift_Down_degrees__degrees, DEGREES, wait=True)
+    LiftR2.spin_for(REVERSE, lift_Down_degrees__degrees, DEGREES, wait=wait_done)   # v13: wait_done=False only for macros
 
-def lift_Up_degrees(lift_Up_degrees__degrees):
+def lift_Up_degrees(lift_Up_degrees__degrees, wait_done=True):
     global pneumaticClaw, pneumaticRotate, puematicTilt, SpeedLeft, SpeedRight, MaxSpeed, screen_precision, console_precision, controller_1_precision
     printdegrees()
     LiftR1.set_velocity(50, PERCENT)
@@ -318,7 +341,7 @@ def lift_Up_degrees(lift_Up_degrees__degrees):
     LiftL1.spin_for(FORWARD, lift_Up_degrees__degrees, DEGREES, wait=False)
     LiftR1.spin_for(FORWARD, lift_Up_degrees__degrees, DEGREES, wait=False)
     LiftL2.spin_for(FORWARD, lift_Up_degrees__degrees, DEGREES, wait=False)
-    LiftR2.spin_for(FORWARD, lift_Up_degrees__degrees, DEGREES, wait=True)
+    LiftR2.spin_for(FORWARD, lift_Up_degrees__degrees, DEGREES, wait=wait_done)   # v13: wait_done=False only for macros
 
 # ----------------------- auton helpers (added) -----------------------
 # You shouldn't need to edit these. The numbers they use are in EDIT THESE at the top.
@@ -329,7 +352,8 @@ auton_start_ms = 0
 def inches_to_degrees(inches):
     # wheel inches -> drive motor degrees. One wheel turn rolls pi x diameter inches.
     # v12 fix: DRIVE_GEAR_RATIO is now wheel turns per motor turn (0.75), so motor degrees = wheel degrees / 0.75
-    return inches / (math.pi * WHEEL_DIAMETER) * 360 / DRIVE_GEAR_RATIO
+    # v13: x DRIVE_DISTANCE_SCALE (robot really rolls 1/1.116 of the ideal inches, so it needs more motor degrees)
+    return inches / (math.pi * WHEEL_DIAMETER) * 360 / DRIVE_GEAR_RATIO * DRIVE_DISTANCE_SCALE
 
 def robot_turn_to_degrees(robot_degrees):
     # how far the ROBOT turns -> drive motor degrees (v12: the new turn code divides this back out, so it's exact robot degrees on the IMU).
@@ -378,11 +402,11 @@ def Turn_side_robot_degrees(robot_degrees):
     # turn the ROBOT this many degrees toward AUTON_SIDE (180 = turn around)
     DriveTrain_Turn_toward_side(robot_turn_to_degrees(robot_degrees))
 
-def Lift_Up_inches(inches):
-    lift_Up_degrees(lift_inches_to_degrees(inches))
+def Lift_Up_inches(inches, wait_done=True):
+    lift_Up_degrees(lift_inches_to_degrees(inches), wait_done)
 
-def Lift_Down_inches(inches):
-    lift_Down_degrees(lift_inches_to_degrees(inches))
+def Lift_Down_inches(inches, wait_done=True):
+    lift_Down_degrees(lift_inches_to_degrees(inches), wait_done)
 
 def auton_setup():
     # runs first in auton: speeds, brake, time limits, and zero the lift (lift must START at the bottom)
@@ -482,7 +506,8 @@ def imu_rot():
 
 # ---------- encoders (averaged), using the fixed wheel/gear numbers ----------
 def motor_deg_to_inches(motor_degrees):
-    return motor_degrees / 360.0 * DRIVE_GEAR_RATIO * math.pi * WHEEL_DIAMETER
+    # v13: / DRIVE_DISTANCE_SCALE = REAL inches (exact inverse of inches_to_degrees, so the scale is applied once, never twice)
+    return motor_degrees / 360.0 * DRIVE_GEAR_RATIO * math.pi * WHEEL_DIAMETER / DRIVE_DISTANCE_SCALE
 
 def drive_position_in():
     left = (L1.position(DEGREES) + L2.position(DEGREES) + L3.position(DEGREES)) / 3.0
@@ -491,7 +516,7 @@ def drive_position_in():
 
 def drive_speed_in_s():
     rpm = (L1.velocity(RPM) + L2.velocity(RPM) + L3.velocity(RPM) + R1.velocity(RPM) + R2.velocity(RPM) + R3.velocity(RPM)) / 6.0
-    return rpm / 60.0 * DRIVE_GEAR_RATIO * math.pi * WHEEL_DIAMETER
+    return rpm / 60.0 * DRIVE_GEAR_RATIO * math.pi * WHEEL_DIAMETER / DRIVE_DISTANCE_SCALE   # v13: real in/s, same units as drive_position_in()
 
 # ---------- output (voltage control, spec) ----------
 def set_drive_volts(left_v, right_v):
@@ -726,6 +751,8 @@ def auton_drive(inches):
             good = 0
         if good >= SETTLE_LOOPS or t > timeout:
             break
+        if macro_cancelled():   # v13: driver cancelled a macro (always False in auton)
+            break
         wait(LOOP_MS, MSEC)
     stop_drive(BRAKE)
 
@@ -742,6 +769,8 @@ def auton_turn(robot_degrees):
         set_drive_volts(volts, -volts)
         if done:
             break
+        if macro_cancelled():   # v13: driver cancelled a macro (always False in auton)
+            break
         wait(LOOP_MS, MSEC)
     stop_drive(BRAKE)
     auton_heading_target = auton_heading_target + robot_degrees
@@ -756,17 +785,118 @@ def legacy_turn_motor_degrees(motor_degrees):
     set_drive_velocity(AUTON_DRIVE_SPEED)
 
 # ---------- driver: Fn key, snaps, macros ----------
-def macro_up():
-    # DRIVER MACRO (Fn + Up): STUB. Put your macro here later.
+# ---------- v13 macro framework ----------
+# A macro is a list of steps run with the same proven moves auton uses:
+#   ("drive", inches)       auton_drive: + forward, - backward (real inches)
+#   ("turn", degrees)       auton_turn on the IMU: + right, - left, from where the robot points WHEN THE MACRO STARTS
+#   ("lift_up", inches)     Lift_Up_inches       ("lift_down", inches)  Lift_Down_inches
+#   ("claw", True/False)    claw_set: True closes, False opens
+#   ("wait", ms)            pause
+# CANCEL: move any stick past MACRO_CANCEL_STICK, or press Fn + the same arrow again -> everything stops.
+MACRO_CANCEL_STICK = 0.20     # [GUESS] stick fraction (0-1) that cancels a running macro. Raise if stick drift cancels macros by itself.
+macro_running = False         # True while a macro runs; the driver loop stays hands-off until it ends
+macro_abort = False           # set when the driver cancels
+macro_arrow = None            # the arrow button that started the running macro
+macro_arrow_let_go = False    # the arrow must be released once before pressing it again counts as cancel
+
+def macro_cancelled():
+    # True if a macro is running and the driver wants out. Checked between steps and inside auton_drive/auton_turn loops.
+    global macro_abort, macro_arrow_let_go
+    if not macro_running:
+        return False
+    if macro_abort:
+        return True
+    for axis in (controller_1.axis1, controller_1.axis2, controller_1.axis3, controller_1.axis4):
+        if abs(axis.position()) / 100.0 > MACRO_CANCEL_STICK:
+            macro_abort = True
+    if macro_arrow is not None:
+        if not macro_arrow.pressing():
+            macro_arrow_let_go = True
+        elif macro_arrow_let_go and fn_held():
+            macro_abort = True
+    return macro_abort
+
+def macro_wait(ms):
+    # a wait that can be cancelled
+    end = brain.timer.time(MSEC) + ms
+    while brain.timer.time(MSEC) < end:
+        if macro_cancelled():
+            return
+        wait(LOOP_MS, MSEC)
+
+def macro_lift_wait():
+    # wait for a lift move to finish (or the macro to be cancelled)
+    end = brain.timer.time(MSEC) + LIFT_MOVE_TIMEOUT_SEC * 1000
+    while brain.timer.time(MSEC) < end:
+        if macro_cancelled():
+            return
+        if LiftL1.is_done() and LiftL2.is_done() and LiftR1.is_done() and LiftR2.is_done():
+            return
+        wait(LOOP_MS, MSEC)
+
+def run_macro(name, arrow_name, steps):
+    global macro_running, macro_abort, macro_arrow, macro_arrow_let_go, auton_heading_target
+    if macro_running:
+        macro_abort = True     # Fn + arrow while a macro runs = cancel it
+        return
     controller_1.screen.clear_row(1)
     controller_1.screen.set_cursor(1, 1)
-    controller_1.screen.print("macro_up")
+    if len(steps) == 0:
+        controller_1.screen.print(name + ": empty")
+        return
+    macro_arrow = button_by_name(arrow_name)
+    macro_arrow_let_go = False
+    macro_abort = False
+    macro_running = True
+    controller_1.screen.print(name)
+    auton_heading_target = imu_rot()   # turns are relative to where the driver left the robot pointing
+    for motor in LIFT_MOTORS:
+        motor.set_timeout(LIFT_MOVE_TIMEOUT_SEC, SECONDS)
+    for step in steps:
+        if macro_cancelled():
+            break
+        kind = step[0]
+        amount = step[1]
+        if kind == "drive":
+            auton_drive(amount)
+        elif kind == "turn":
+            auton_turn(amount)
+        elif kind == "lift_up":
+            Lift_Up_inches(amount, False)
+            macro_lift_wait()
+        elif kind == "lift_down":
+            Lift_Down_inches(amount, False)
+            macro_lift_wait()
+        elif kind == "claw":
+            claw_set(amount)
+        elif kind == "wait":
+            macro_wait(amount)
+    cancelled = macro_abort
+    # stop everything: drive brakes, lift stops on HOLD (stays where it is)
+    stop_drive(BRAKE)
+    for motor in LIFT_MOTORS:
+        motor.stop()
+    controller_1.screen.clear_row(1)
+    controller_1.screen.set_cursor(1, 1)
+    if cancelled:
+        controller_1.screen.print(name + " CANCEL")
+    else:
+        controller_1.screen.print(name + " done")
+    macro_running = False
+
+# Steps for each macro go in these lists. EMPTY until you decide what they do.
+# Example (NOT active): close claw, lift up 6 in, back up 8 in, turn 90 right:
+#   MACRO_UP_STEPS = [("claw", True), ("wait", 200), ("lift_up", 6), ("drive", -8), ("turn", 90)]
+MACRO_UP_STEPS = []
+MACRO_DOWN_STEPS = []
+
+def macro_up():
+    # DRIVER MACRO (Fn + Up): runs MACRO_UP_STEPS (empty for now)
+    run_macro("macro_up", FN_MACRO_UP, MACRO_UP_STEPS)
 
 def macro_down():
-    # DRIVER MACRO (Fn + Down): STUB. Put your macro here later.
-    controller_1.screen.clear_row(1)
-    controller_1.screen.set_cursor(1, 1)
-    controller_1.screen.print("macro_down")
+    # DRIVER MACRO (Fn + Down): runs MACRO_DOWN_STEPS (empty for now)
+    run_macro("macro_down", FN_MACRO_DOWN, MACRO_DOWN_STEPS)
 
 def fn_held():
     return fn_btn is not None and fn_btn.pressing()
@@ -814,6 +944,15 @@ def new_driver_loop():
     hold_target = None
     snap = None
     while True:
+        if macro_running:
+            # v13: a driver macro owns the motors; stay hands-off and restart smoothly from 0 when it ends
+            drive_sh.reset(0.0)
+            turn_sh.reset(0.0)
+            hold_target = None
+            snap = None
+            snap_request = 0
+            wait(LOOP_MS, MSEC)
+            continue
         rd = controller_1.axis3.position() / 100.0
         rt = controller_1.axis1.position() / 100.0
         xd = deadband(rd, DRIVE_DEADBAND)
@@ -854,6 +993,7 @@ def new_driver_loop():
         Lt = turn_L.update(ft, rot, precision, dt)
 
         target_v = Pd * Ld * fd * DRIVER_DRIVE_MAX
+        target_v *= tip_guard_drive_scale()   # v13 tip guard: lift high -> drive (not turn) at 50%; the shaper slows it down smoothly
         target_w = Pt * Lt * ft * DRIVER_TURN_MAX
 
         # spec 4: speed-dependent turn authority |w*| <= a_lat / |v|
@@ -887,6 +1027,21 @@ def new_driver_loop():
         set_drive_volts(left, right)
         wait(LOOP_MS, MSEC)
 
+# ---------- v13 tip guard ----------
+tip_guard_on = False
+
+def tip_guard_drive_scale():
+    # 1.0 normally; TIP_GUARD_DRIVE_SCALE (0.5) while the lift is high. On above TIP_GUARD_LIFT_DEG, off below TIP_GUARD_RELEASE_DEG.
+    global tip_guard_on
+    lift = LiftL1.position(DEGREES)
+    if lift > TIP_GUARD_LIFT_DEG:
+        tip_guard_on = True
+    elif lift < TIP_GUARD_RELEASE_DEG:
+        tip_guard_on = False
+    if tip_guard_on:
+        return TIP_GUARD_DRIVE_SCALE
+    return 1.0
+
 # ---------- quick tests (CONFIG: AUTON_TEST) ----------
 def run_auton_test():
     brain.screen.clear_screen()
@@ -911,6 +1066,41 @@ def run_auton_test():
         brain.screen.set_cursor(1, 1)
         brain.screen.print("IMU turned: " + str(round(imu_rot() - h0, 1)) + " deg")
         print("TURN90 IMU turned " + str(round(imu_rot() - h0, 1)))
+    elif AUTON_TEST == "TUNE":
+        # v13 PID tuning run (~5 s): drive 24, turn 90, turn -90, drive -24.
+        # After each step: e = distance error (inches, + = stopped short), h = heading error (deg, + = needs to turn more right).
+        brain.screen.set_cursor(1, 1)
+        brain.screen.print("TUNE  e=in  h=deg")
+        controller_1.screen.clear_screen()
+        results = []
+        steps = [("D", 24), ("T", 90), ("T", -90), ("D", -24)]
+        row = 4
+        for kind, amount in steps:
+            x0 = drive_position_in()
+            if kind == "D":
+                auton_drive(amount)
+            else:
+                auton_turn(amount)
+            wait(300, MSEC)
+            h = wrap180(auton_heading_target - imu_rot())
+            if kind == "D":
+                e = amount - (drive_position_in() - x0)
+                if amount < 0:
+                    e = -e        # backward: + still means stopped short
+                line = kind + str(amount) + " e" + str(round(e, 2)) + " h" + str(round(h, 1))
+            else:
+                line = kind + str(amount) + " h" + str(round(h, 1))
+            results.append(line)
+            brain.screen.set_cursor(row, 1)
+            brain.screen.print(line)
+            row += 1
+            print("TUNE " + line)
+        controller_1.screen.set_cursor(1, 1)
+        controller_1.screen.print(results[0])
+        controller_1.screen.set_cursor(2, 1)
+        controller_1.screen.print(results[1] + " " + results[2])
+        controller_1.screen.set_cursor(3, 1)
+        controller_1.screen.print(results[3])
 # ==================================================================================================================
 
 def when_started1():
@@ -938,8 +1128,9 @@ def ondriver_drivercontrol_0():
         new_driver_loop()   # v12 pipeline (CONFIG: USE_NEW_DRIVE = False goes back to the v11 loop below)
         return
     while True:
-        SpeedLeft = (controller_1.axis3.position() * MaxSpeed + controller_1.axis1.position() * DRIVER_TURN_SPEED) / 8.3  # fixed: now matches SpeedRight
-        SpeedRight = (controller_1.axis3.position() * MaxSpeed - controller_1.axis1.position() * DRIVER_TURN_SPEED) / 8.3
+        guard = tip_guard_drive_scale()   # v13 tip guard (drive only, not turn)
+        SpeedLeft = (controller_1.axis3.position() * MaxSpeed * guard + controller_1.axis1.position() * DRIVER_TURN_SPEED) / 8.3  # fixed: now matches SpeedRight
+        SpeedRight = (controller_1.axis3.position() * MaxSpeed * guard - controller_1.axis1.position() * DRIVER_TURN_SPEED) / 8.3
         L1.spin(FORWARD, SpeedLeft, VOLT)
         L2.spin(FORWARD, SpeedLeft, VOLT)
         L3.spin(FORWARD, SpeedLeft, VOLT)
@@ -963,6 +1154,8 @@ def onauton_autonomous_0():
     # Turns are now true robot degrees on the IMU (TURN_DEG_PER_ROBOT_DEG note in CONFIG):
     #   step 4: old 1.1 in = 1.1/(pi x 2.75) x 360 = 45.8 motor deg -> 45.8 / 4.73 = 9.7 robot deg
     #   step 9: old 230 x 3.7 = 851 motor deg -> 851 / 4.73 = 180 robot deg (a true turn-around)
+    # v13 NOTE: DRIVE_DISTANCE_SCALE (1.116) now makes these real inches. Before v13 the robot went ~10% short of each number
+    # (DRIVE24 test: 21.5 of 24), so this path now travels ~11.6% farther than v12 did. Re-check the path at practice.
     claw_set(True)               # 1. close the claw right away
     wait(800, MSEC)
     Lift_Up_inches(6.5)          # 2. lift up
@@ -1037,61 +1230,90 @@ def controller_1buttonR2_released_callback_0():
     global pneumaticClaw, pneumaticRotate, puematicTilt, SpeedLeft, SpeedRight, MaxSpeed, screen_precision, console_precision, controller_1_precision
     RearSpinner.stop()
 
+# ---------- v13 lift ramp: speed ramps up on press and down on release (no instant 50% / slam stop) ----------
+lift_cmd_pct = 0.0     # lift speed the driver ramp is commanding right now, % (+ = up, - = down)
+lift_ramp_id = 0       # bumped on every L1/L2 press/release so an older ramp loop stops when a newer one starts
+
+def lift_ramp_toward(current, target, dt):
+    # move current toward target by at most LIFT_DRIVER_SPEED per LIFT_RAMP_SEC
+    step = LIFT_DRIVER_SPEED * dt / LIFT_RAMP_SEC
+    if current < target:
+        return min(target, current + step)
+    return max(target, current - step)
+
+def lift_spin_pct(pct):
+    # + = up (FORWARD, same as v11 L1), - = down (REVERSE, same as v11 L2)
+    direction = FORWARD
+    if pct < 0:
+        direction = REVERSE
+    for motor in [LiftR1, LiftL1, LiftL2, LiftR2]:
+        motor.set_velocity(abs(pct), PERCENT)
+        motor.spin(direction)
+
+def lift_stop_hold():
+    LiftL1.stop()
+    LiftR1.stop()
+    LiftL2.stop()
+    LiftR2.stop()
+
+def lift_driver_hold(button, target_pct):
+    # runs while L1/L2 is held: ramp toward +/-LIFT_DRIVER_SPEED, stop at the 0 / 900 limits like v11
+    global lift_cmd_pct, lift_ramp_id
+    lift_ramp_id += 1
+    my_id = lift_ramp_id
+    last_ms = brain.timer.time(MSEC)
+    while button.pressing() and my_id == lift_ramp_id:
+        now = brain.timer.time(MSEC)
+        dt = (now - last_ms) / 1000.0
+        last_ms = now
+        pos = LiftL1.position(DEGREES)
+        if (target_pct > 0 and pos <= 900) or (target_pct < 0 and pos > 0):
+            printdegrees()
+            lift_cmd_pct = lift_ramp_toward(lift_cmd_pct, target_pct, dt)
+            lift_spin_pct(lift_cmd_pct)
+        else:
+            # at the 900 top / 0 bottom limit, actually stop the lift
+            lift_cmd_pct = 0.0
+            lift_stop_hold()
+        wait(5, MSEC)
+
+def lift_driver_release():
+    # L1/L2 let go: ramp the speed down to 0 over LIFT_RAMP_SEC, THEN stop on HOLD (no full-torque slam)
+    global lift_cmd_pct, lift_ramp_id
+    lift_ramp_id += 1
+    my_id = lift_ramp_id
+    last_ms = brain.timer.time(MSEC)
+    while lift_cmd_pct != 0 and my_id == lift_ramp_id:
+        pos = LiftL1.position(DEGREES)
+        if (lift_cmd_pct > 0 and pos > 900) or (lift_cmd_pct < 0 and pos <= 0):
+            break        # never coast past a limit while ramping down
+        now = brain.timer.time(MSEC)
+        dt = (now - last_ms) / 1000.0
+        last_ms = now
+        lift_cmd_pct = lift_ramp_toward(lift_cmd_pct, 0.0, dt)
+        if lift_cmd_pct == 0:
+            break
+        lift_spin_pct(lift_cmd_pct)
+        wait(5, MSEC)
+    if my_id == lift_ramp_id:   # a new L1/L2 press didn't take over
+        lift_cmd_pct = 0.0
+        lift_stop_hold()
+
 def controller_1buttonL1_pressed_callback_0():
     global pneumaticClaw, pneumaticRotate, puematicTilt, SpeedLeft, SpeedRight, MaxSpeed, screen_precision, console_precision, controller_1_precision
-    while controller_1.buttonL1.pressing():
-        if LiftL1.position(DEGREES) <= 900:
-            printdegrees()
-            LiftR1.set_velocity(50, PERCENT)
-            LiftL1.set_velocity(50, PERCENT)
-            LiftL1.spin(FORWARD)
-            LiftR1.spin(FORWARD)
-            LiftL2.set_velocity(50, PERCENT)
-            LiftR2.set_velocity(50, PERCENT)
-            LiftL2.spin(FORWARD)
-            LiftR2.spin(FORWARD)
-        else:
-            # fixed: at the 900 limit, actually stop the lift (it used to keep running)
-            LiftL1.stop()
-            LiftR1.stop()
-            LiftL2.stop()
-            LiftR2.stop()
-        wait(5, MSEC)
+    lift_driver_hold(controller_1.buttonL1, LIFT_DRIVER_SPEED)    # v13: ramped (v11: instant 50% up)
 
 def controller_1buttonL2_pressed_callback_0():
     global pneumaticClaw, pneumaticRotate, puematicTilt, SpeedLeft, SpeedRight, MaxSpeed, screen_precision, console_precision, controller_1_precision
-    while controller_1.buttonL2.pressing():
-        if LiftL1.position(DEGREES) > 0:
-            printdegrees()
-            LiftR1.set_velocity(50, PERCENT)
-            LiftL1.set_velocity(50, PERCENT)
-            LiftL1.spin(REVERSE)
-            LiftR1.spin(REVERSE)
-            LiftL2.set_velocity(50, PERCENT)
-            LiftR2.set_velocity(50, PERCENT)
-            LiftL2.spin(REVERSE)
-            LiftR2.spin(REVERSE)
-        else:
-            # fixed: at the 0 limit, actually stop the lift (it used to keep running)
-            LiftL1.stop()
-            LiftR1.stop()
-            LiftL2.stop()
-            LiftR2.stop()
-        wait(5, MSEC)
+    lift_driver_hold(controller_1.buttonL2, -LIFT_DRIVER_SPEED)   # v13: ramped (v11: instant 50% down)
 
 def controller_1buttonL1_released_callback_0():
     global pneumaticClaw, pneumaticRotate, puematicTilt, SpeedLeft, SpeedRight, MaxSpeed, screen_precision, console_precision, controller_1_precision
-    LiftL1.stop()
-    LiftR1.stop()
-    LiftL2.stop()
-    LiftR2.stop()
+    lift_driver_release()   # v13: ramp down, then HOLD
 
 def controller_1buttonL2_released_callback_0():
     global pneumaticClaw, pneumaticRotate, puematicTilt, SpeedLeft, SpeedRight, MaxSpeed, screen_precision, console_precision, controller_1_precision
-    LiftL1.stop()
-    LiftR1.stop()
-    LiftL2.stop()
-    LiftR2.stop()
+    lift_driver_release()   # v13: ramp down, then HOLD
 
 # create a function for handling the starting and stopping of all autonomous tasks
 def vexcode_auton_function():
