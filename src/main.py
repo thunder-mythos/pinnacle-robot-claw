@@ -1,10 +1,19 @@
-#region VEXcode Generated Robot Configuration
+# ---------------------------------------------------------------------------- #
+#                                                                              #
+# 	Module:       main.py                                                      #
+# 	Author:       viraa                                                        #
+# 	Created:      10/15/2026, 10:06:25 PM                                       #
+# 	Description:  Pinnacle claw bot - v14 (format-only reformat of v13)        #
+#                                                                              #
+# ---------------------------------------------------------------------------- #
+
+# Library imports
 from vex import *
 import urandom
 import math
 
 # Brain should be defined by default
-brain=Brain()
+brain = Brain()
 
 # Robot configuration code
 controller_1 = Controller(PRIMARY)
@@ -48,8 +57,6 @@ def play_vexcode_sound(sound_name):
 wait(200, MSEC)
 # clear the console to make sure we don't have the REPL in the console
 print("\033[2J")
-
-#endregion VEXcode Generated Robot Configuration
 
 screen_precision = 0
 console_precision = 0
@@ -1316,31 +1323,32 @@ def controller_1buttonL2_released_callback_0():
     lift_driver_release()   # v13: ramp down, then HOLD
 
 # create a function for handling the starting and stopping of all autonomous tasks
-def vexcode_auton_function():
+def autonomous():
     # Start the autonomous control tasks
     auton_task_0 = Thread( onauton_autonomous_0 )
     # wait for the driver control period to end
-    while( competition.is_autonomous() and competition.is_enabled() ):
+    while( comp.is_autonomous() and comp.is_enabled() ):
         # wait 10 milliseconds before checking again
         wait( 10, MSEC )
     # Stop the autonomous control tasks
     auton_task_0.stop()
 
-def vexcode_driver_function():
+def user_control():
     # Start the driver control tasks
     driver_control_task_0 = Thread( ondriver_drivercontrol_0 )
 
     # wait for the driver control period to end
-    while( competition.is_driver_control() and competition.is_enabled() ):
+    while( comp.is_driver_control() and comp.is_enabled() ):
         # wait 10 milliseconds before checking again
         wait( 10, MSEC )
     # Stop the driver control tasks
     driver_control_task_0.stop()
 
 
-# register the competition functions
-competition = Competition( vexcode_driver_function, vexcode_auton_function )
+# create competition instance (registers the competition functions)
+comp = Competition(user_control, autonomous)
 
+# actions to do when the program starts
 # system event handlers
 controller_1.buttonX.pressed(controller_1buttonX_pressed_callback_0)
 controller_1.buttonDown.pressed(controller_1buttonDown_pressed_callback_0)
