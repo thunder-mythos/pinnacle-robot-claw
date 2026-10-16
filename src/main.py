@@ -3,7 +3,7 @@
 # 	Module:       main.py                                                      #
 # 	Author:       viraa                                                        #
 # 	Created:      10/15/2026, 10:06:25 PM                                       #
-# 	Description:  Pinnacle claw bot - v17 (v12 snap turns + TURN_KD 0.02)  #
+# 	Description:  Pinnacle claw bot - v18 (auton 1st forward 38 in)        #
 #                                                                              #
 # ---------------------------------------------------------------------------- #
 
@@ -1166,7 +1166,7 @@ def onauton_autonomous_0():
     claw_set(True)               # 1. close the claw right away
     wait(800, MSEC)
     Lift_Up_inches(6.5)          # 2. lift up
-    Forward_inches(19.5)         # 3. forward (v11: 22)
+    Forward_inches(38)           # 3. forward (v18: 38 in, measured to the goal Oct 16; v12-v17: 19.5, v11: 22)
     wait(800, MSEC)
     Turn_side_robot_degrees(9.7) # 4. small turn toward AUTON_SIDE (v11: Turn_side_inches(1.1))
     wait(800, MSEC)
