@@ -1,8 +1,10 @@
 # Packet FLM-V2-PILOT-001: Reproduce claw_v18 from a Written Spec
 
-- **Status:** Ready to fire. Blocked only on Codex login, which does not exist yet.
+- **Status:** Ready to fire. Blocked only on the repo import merge and the cloud environment publish.
 - **Type:** First pilot for the FLM-V2 Codex worker (Robotics Code Work lane).
+- **Model and effort (Thunder's policy, Nov 11, 2026):** GPT-6.1 Terra, Medium. Never Low; Medium is the minimum.
 - **Run directory:** `~/workspace/robotics-fresh/codex/runs/FLM-V2-PILOT-001/`
+- **Base (cloud re-aim):** after PR #1 merges, the base becomes commit afe2122 in thunder-mythos/pinnacle-robot-claw (`claw/claw_v17.py`, `claw/claw_v17.v5python`); the hash-pinned staged copies below stay the verification reference.
 
 ## Objective
 
