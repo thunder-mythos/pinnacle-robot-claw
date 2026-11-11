@@ -10,9 +10,9 @@
 
 Thunder asked where I stand on model and effort before the first build. Here it is, per task, set in each packet:
 
-- **Model:** Codex's current default is GPT-6 Sol, the model OpenAI recommends for complex coding and agentic work; GPT-6 Luna is the lighter model for focused, repeatable tasks. The CLI sets the model per dispatch with `-m` (verified in the installed CLI's help). My stance: the pilot (a mechanical one-line reproduction with an exact hash proof) runs on **Luna**, because thinking harder buys nothing there; the conversion work runs on **Sol**, because it is design-heavy and the cost of a wrong port is a broken build and a wasted cycle. The account's available models are the final authority; if Sol is not on his plan, the packet says so and falls back to the strongest available.
-- **Effort:** reasoning effort is a per-task config setting (low, medium, high), applied through the config override the CLI supports. My stance: pilot runs **low** effort, conversion packets run **high** effort. Effort is recorded in each packet so every task carries its own spend. One honest caveat: the effort key name comes from Codex documentation, not from this CLI's help text; I confirm the accepted values on the first dispatch and correct this record if it differs.
-- **Cost note:** every Codex run draws on his ChatGPT plan allowance, shared across Codex seats. Low effort on mechanical tasks is how the allowance is protected.
+- **Model (Thunder's policy, Nov 11, 2026; supersedes the earlier Luna/Sol stance):** the default model is the newest **Terra**. Luna is never the default. Planning anything always uses **Astra**. The CLI sets the model per dispatch with `-m` (verified in the installed CLI's help). Per task: pilot runs **Terra**; most conversion work runs **Sol**; extra-important work runs **Sol** too, at higher effort. The account's available models are the final authority; if a named model is not on his plan, the packet says so and falls back to the strongest available.
+- **Effort (Thunder's rule, Nov 11, 2026):** never **Low** on anything. **Medium is the minimum.** If a task cannot afford the model at Medium, downgrade the model rather than dropping the effort below Medium. Per task: pilot runs **Medium**; most work runs **Medium**; extra-important work runs **High**. Effort is recorded in each packet so every task carries its own spend. One honest caveat: the effort key name comes from Codex documentation, not from this CLI's help text; I confirm the accepted values on the first dispatch and correct this record if it differs.
+- **Cost note:** every Codex run draws on his ChatGPT plan allowance, shared across Codex seats. The Medium floor is the protection trade: spend the model, not the effort.
 
 ## Our feature list (claw_v17)
 
@@ -114,8 +114,8 @@ Verdict key: **LIB** means the library provides it and we use the library's vers
 1. Where a library provides the feature, use the library's version. That is the whole point: rows 1, 2, 12, 18, 19, and 20 are library wins in at least one template, and row 18 (auton motion) is the biggest single win in the entire comparison.
 2. Where a library provides the primitive but not the behavior, team code wraps the primitive. Rows 9, 10, and 16 are wraps in all three libraries.
 3. Where no library provides it, it stays team code, written in the library's idiom. Rows 4, 6, 7, 8, 11, 13, 14, and 15 are team code in every template.
-4. The one structural gap: **per-motor scales inside a side (row 3) have no path in any library.** All three chassis models command motor groups, so a tune that splits L1 from L2 cannot pass through. Options, in order: (a) accept per-side scales, since v17's values are uniform within each side anyway; (b) build a custom drive layer under the chassis for that one feature. This is a Thunder decision, not a Codex one, and it is the only feature where the "library always wins" assumption does not hold.
-5. The knee map (row 5) is deliberately dropped in all three, by his rule against stick shaping. Restoring it is his call alone.
+4. The one structural gap: **per-motor scales inside a side (row 3) have no path in any library.** All three chassis models command motor groups, so a tune that splits L1 from L2 cannot pass through. Thunder's decision (Nov 11, 2026): **accept per-side scales.** v17's values are uniform within each side anyway, and the custom drive layer option is not pursued unless he reopens it. This is the only feature where the "library always wins" assumption does not hold.
+5. The knee map (row 5) is deliberately dropped in all three, by his rule against stick shaping. Thunder confirmed the drop Nov 11, 2026. Restoring it is his call alone.
 6. Library-only capabilities (the last table) are not adopted by default. They are options the pick unlocks, and each one is its own later packet with its own proof, never bundled into the port.
 
 ## How the parallel sequences are managed (Thunder's call, Nov 11)
@@ -124,6 +124,7 @@ His ruling: during conversion, all three tracks carry the same traits; after the
 
 - **One shared parity spec:** this document plus the v17 feature list is the single source of truth every track reads. Traits stay identical because they are read from one place, not because three tracks are checked against each other afterward.
 - **One branch and one loop per template:** branches `codex/pros-<template>-parity` then `codex/pros-<template>-slew`; loops CX-12 (LemLib), CX-13 (EZ), CX-14 (Okapi) in `OPEN_LOOPS.md`, each with its own named proof. No cross-merging between tracks at any point.
+- **Working surface (Thunder, Nov 11):** the three agents work inside the shared cloud environment while they build, editing there as they go, and each pushes its track to GitHub at the end. The cloud env is the shared construction site; the repo is where finished tracks land.
 - **One convergence point:** the comparison table at the end, scored on the same criteria for all three, and then his pick. The unpicked branches stay built on disk.
 - **After conversion:** each line is managed separately (own branch, own loop, own tune values). The shared spec stops being the authority the day he picks, and the picked line's own docs take over.
 
