@@ -12,7 +12,7 @@ Read after AGENTS.md. This is where things stand, what the team is trying to do,
 
 **The Codex route.** Thunder confirmed Cloud plus CLI dispatch on Nov 10, 2026: Corvin dispatches cloud tasks from the VM's Codex CLI once it is signed in by device auth, Thunder watches and steers in his ChatGPT desktop app, and GitHub (thunder-mythos/pinnacle-robot-claw) is the home for the claw series. The sequence from here: VM sign-in first, then commit the claw series into the repo, then Thunder publishes the cloud environment, then the pilot (FLM-V2-PILOT-001, the v18 reproduction, re-aimed to a commit-based proof) fires. Setup is done to the login wall; sign-in has not happened.
 
-**PROS.** The switch is undecided. Thunder's word: the code is likely heading toward PROS and more comes from him later. Preparation exists (plain scaffold mirroring v17, three template variants, a transition protocol) so the call, if it comes, is execution rather than research. The Python claw series remains the competition code until he says otherwise.
+**PROS.** The switch is undecided. Thunder's word: the code is likely heading toward PROS and more comes from him later. Preparation exists (plain scaffold mirroring v17, two template variants, a transition protocol) so the call, if it comes, is execution rather than research. (OkapiLib was a third variant, dropped Nov 11, 2026.) The Python claw series remains the competition code until he says otherwise.
 
 **The season clock.** The team's path runs through the JROTC National Championship in Reno, NV (Mar 6 to 7, 2027), qualifying toward RECF Worlds in St. Louis (Apr 27 to May 6, 2027). Code decisions are made against that clock: nothing unproven rides to Reno.
 

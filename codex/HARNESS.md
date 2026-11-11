@@ -13,7 +13,7 @@ The map of this lane. Every file Codex may meet, what it holds, and how it conne
   pros-transition-protocol.md           how the PROS switch runs, if called
   pros-scaffold/                        plain PROS (C++) scaffold, mirrors v17
   pros-templates/                       PROS template variants (candidate bases)
-    ez-template/  lemlib/  okapilib-legacy/
+    ez-template/  lemlib/
   codex/                                the Codex harness (this folder)
   build/                                scratch and reference material, not source
 
@@ -40,7 +40,7 @@ On the cloud route, the claw series lives in the GitHub repo (thunder-mythos/pin
 ## The PROS side (preparation, not adopted)
 
 - **pros-scaffold/** is a plain PROS C++ project that mirrors claw_v17 feature by feature (kernel 4.2.0; src: main, robot_config, drive, driver, mechanisms, auton; include: config.hpp, robot.hpp, main.h). It exists so a PROS switch, if Thunder calls it, starts from a port instead of a blank page. It has never been compiled against a real PROS kernel on this machine and has never run on a brain.
-- **pros-templates/** holds three public template projects (ez-template, lemlib, okapilib-legacy), each a full PROS project tree. They are candidate bases for the movement layer, to be built as separate branches and compared if the switch is called. None is adopted; none outranks the plain scaffold until Thunder picks.
+- **pros-templates/** holds two public template projects (ez-template, lemlib), each a full PROS project tree. They are candidate bases for the movement layer, to be built as separate branches and compared if the switch is called. None is adopted; none outranks the plain scaffold until Thunder picks. (OkapiLib was a third candidate, dropped Nov 11, 2026.)
 - **pros-transition-protocol.md** is the adoption plan: step order, the validation standard per step, and where Thunder's gates sit. It executes only on his call.
 - **pros-movement-research.md** is the evidence base for the movement work: why PROS bots look smooth (library slew limiting first, then PID with settle exits, then chaining and stick curves, then hardware), what is replicable in the current Python stack, and what genuinely needs PROS. Read it before any movement-related packet.
 
