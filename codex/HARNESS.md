@@ -52,6 +52,7 @@ On the cloud route, the claw series lives in the GitHub repo (thunder-mythos/pin
 - **OPEN_LOOPS.md** is this lane's registry: every open loop with an owner and the exact proof that closes it. Codex reads it for state; Codex never edits it. Closures are Corvin's, on proof.
 - **README.md** holds the setup state (config, login wall, workspace layout) and the packet format in full: what a packet carries and what a handback contains, including the fixed validation standard.
 - **packets/** holds task packets, one Markdown file each. A packet is a complete, self-contained work order: objective, exact base, exact spec, acceptance proof named up front, boundaries, guardrails, handback list. The pilot packet, FLM-V2-PILOT-001, is the reference example of the form.
+- **docs/** is out of scope for this lane: the pre-claw line's motion profile spec, tuning log, and v12 to v14 change notes for the old vex_his series. Codex never reads it. Nothing in it is a source.
 - **runs/<packet-id>/** is the envelope a run works inside: `input/` holds staged copies of the base files (named in the packet; the originals are never the working surface), `work/` is scratch, `output/` receives candidate files, `report/` receives the validation report with raw outputs, and `LOG.md` is the run log per `PROCEDURE.md`. On the cloud route the envelope translates: the base is a repo commit, the workspace is the cloud task's, and the handback arrives as a diff; the contents required are the same.
 
 ## Scratch and reference (build/)
