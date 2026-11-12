@@ -16,7 +16,7 @@ The human is the bottleneck this system exists to remove. Work is split three wa
 
 - Every task arrives as a **packet** with its acceptance proof named before work starts. No packet, no work.
 - You report by **push**: when a task finishes, your report is the deliverable, placed where the packet says. Nobody polls you and you do not wait to be asked.
-- **A summary is not evidence.** Your proof is raw output: hashes, diffs, check results. Claims without artifacts are treated as not done.
+- **A summary is not evidence.** Your proof is raw output: the run log, diffs, check results. Claims without artifacts are treated as not done.
 - A loop closes only on its named proof, checked by Corvin. Nothing you say closes a loop by itself.
 
 ## Startup ritual (every session, in order)
@@ -24,9 +24,10 @@ The human is the bottleneck this system exists to remove. Work is split three wa
 1. Read this file.
 2. Read `CONTEXT.md` (where things stand, team code goals, research on top, who the people are by role, known unknowns).
 3. Read `HARNESS.md` (the folder structure and what every file is and how it connects).
-4. Read `OPEN_LOOPS.md` (this lane's registry: what is open, who owns it, what proof closes it).
-5. Read the packet you were given, in full, before touching a file.
-6. Verify the packet's base hashes. A mismatch is a stop, not a judgment call.
+4. Read `PROCEDURE.md` (the nine steps and the run log rules).
+5. Read `OPEN_LOOPS.md` (this lane's registry: what is open, who owns it, what proof closes it).
+6. Read the packet you were given, in full, before touching a file.
+7. Confirm the packet's base matches what is in your env. A mismatch is a stop, not a judgment call.
 
 ## How you work (the work ethic of this lane)
 
@@ -36,11 +37,12 @@ The human is the bottleneck this system exists to remove. Work is split three wa
 - **Guesses are banned.** A value nobody verified is labeled a guess and does not enter code. If a packet leaves a value or a behavior ambiguous, stop and write the question in your report instead of filling it in.
 - **Validation is fixed, not improvised.** Python versions: ast.parse clean, no duplicate top-level definitions, exactly one IMU definition, wrapper built by the fixed recipe with the device count checked, and a line diff against base reviewed. PROS work: the same discipline translated (honest build state, device map diffed port by port, exact diff per step). Full text of the standard lives in `README.md` in this folder.
 - **Labels are mandatory.** Any new or changed tune variable is listed in your report as UNTESTED or MATH-VERIFIED, with what it depends on. Unlabeled values fail the run.
+- **Log every action.** Every read, edit, validation run, stop, question, and handback step goes in the run log per `PROCEDURE.md`, with timestamp, tools, objective, and outcome. Nothing unlogged. A gap in the log is a gap in the proof.
 - **Report raw, report plain.** Your report states what passed, what failed, and what you could not verify, with the outputs attached. Never round a partial result up to done.
 
 ## Stop conditions (halt and write it in the report)
 
-- A base hash does not match the packet.
+- The base does not match the packet.
 - The spec is ambiguous, incomplete, or contradicts the guardrails.
 - The task touches drive direction, snap turns, or heading hold (gated on physical tests that have not happened; see `CONTEXT.md`).
 - The task needs a value nobody has given.

@@ -48,11 +48,11 @@ On the cloud route, the claw series lives in the GitHub repo (thunder-mythos/pin
 
 - **AGENTS.md** is the standing instruction: roles, the First and Last Mile concept, the work ethic, the startup ritual, stop conditions, guardrails. It is the first file read in every session.
 - **CONTEXT.md** is the standing context: where the work currently stands, the team's code goals, the research on top, the team by role silhouette, and the known unknowns. It changes as facts change; when it and a packet disagree, the packet wins for that task and the disagreement gets flagged in the report.
-- **HARNESS.md** is this map.
+- **PROCEDURE.md** is the run procedure: the nine steps every Codex run follows, and the run log rules (hierarchical markdown, frontmatter, append-only).
 - **OPEN_LOOPS.md** is this lane's registry: every open loop with an owner and the exact proof that closes it. Codex reads it for state; Codex never edits it. Closures are Corvin's, on proof.
 - **README.md** holds the setup state (config, login wall, workspace layout) and the packet format in full: what a packet carries and what a handback contains, including the fixed validation standard.
-- **packets/** holds task packets, one Markdown file each. A packet is a complete, self-contained work order: objective, hash-pinned base, exact spec, acceptance proof named up front, boundaries, guardrails, handback list. The pilot packet, FLM-V2-PILOT-001, is the reference example of the form.
-- **runs/<packet-id>/** is the envelope a run works inside: `input/` holds staged copies of the base files (hash-pinned in the packet; the originals are never the working surface), `work/` is scratch, `output/` receives candidate files, `report/` receives the validation report with raw outputs. On the cloud route the envelope translates: the base is a repo commit, the workspace is the cloud task's, and the handback arrives as a diff; the contents required are the same.
+- **packets/** holds task packets, one Markdown file each. A packet is a complete, self-contained work order: objective, exact base, exact spec, acceptance proof named up front, boundaries, guardrails, handback list. The pilot packet, FLM-V2-PILOT-001, is the reference example of the form.
+- **runs/<packet-id>/** is the envelope a run works inside: `input/` holds staged copies of the base files (named in the packet; the originals are never the working surface), `work/` is scratch, `output/` receives candidate files, `report/` receives the validation report with raw outputs, and `LOG.md` is the run log per `PROCEDURE.md`. On the cloud route the envelope translates: the base is a repo commit, the workspace is the cloud task's, and the handback arrives as a diff; the contents required are the same.
 
 ## Scratch and reference (build/)
 
