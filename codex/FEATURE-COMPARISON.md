@@ -3,16 +3,17 @@
 - **Date:** Nov 11, 2026
 - **Method (Thunder's, Nov 11):** list every feature in our current code, list every feature each PROS library/template provides, compare the two lists, and wherever a library wins, use the library. The assumption is that the prebuilt work of people better at this than us beats our from-scratch work. The port is written as if the code had been made in that library from the beginning.
 - **Source of truth, our side:** claw_v17.py, read in full Nov 11, 2026 (359 lines). Every feature below traces to it.
-- **Source of truth, library side:** the three template trees under `~/workspace/robotics-fresh/pros-templates/` (each with its own README containing a v17 feature map, read Nov 11, 2026) plus `~/workspace/robotics-fresh/pros-movement-research.md` (Nov 7). Library API names are UNVERIFIED against installed headers: no PROS toolchain exists on this VM and nothing here has compiled. First build in the cloud environment settles name drift.
-- **Status:** comparison only. No conversion packet has fired. The PROS switch itself is still undecided.
+- **Source of truth, library side:** the two template trees under `~/workspace/robotics-fresh/pros-templates/` (each with its own README containing a v17 feature map, read Nov 11, 2026) plus `~/workspace/robotics-fresh/pros-movement-research.md` (Nov 7). A third template, OkapiLib, was evaluated and dropped Nov 11, 2026 per Thunder; its column below is kept as the record of that evaluation. Library API names are UNVERIFIED against installed headers: no PROS toolchain exists on this VM and nothing here has compiled. First build in the cloud environment settles name drift.
+- **Status:** comparison only. No conversion packet has fired. The PROS switch itself is still undecided. OkapiLib track DROPPED Nov 11, 2026 (archived upstream, nobody uses it). Remaining tracks: LemLib, EZ-Template.
 
 ## Dispatch standard for this phase (model and effort)
 
 Thunder asked where I stand on model and effort before the first build. Here it is, per task, set in each packet:
 
-- **Model (Thunder's policy, Nov 11, 2026; supersedes the earlier Luna/Sol stance):** the default model is the newest **Terra**. Luna is never the default. Planning anything always uses **Astra**. The CLI sets the model per dispatch with `-m` (verified in the installed CLI's help). Per task: pilot runs **Terra**; most conversion work runs **Sol**; extra-important work runs **Sol** too, at higher effort. The account's available models are the final authority; if a named model is not on his plan, the packet says so and falls back to the strongest available.
+- **Model (Thunder's policy, Nov 11, 2026; supersedes the earlier Luna/Sol stance):** the default model is the newest **Terra**. Luna is never the default. Planning anything always uses **Astra**. The CLI sets the model per dispatch with `-m` (verified in the installed CLI's help). Per task: pilot runs **Terra**; most conversion work runs **Sol**; extra-important work runs **Sol** too, at higher effort. Newest variants verified Nov 11, 2026 from the account's own model list: **GPT-6.1 Terra** and **GPT-6.1 Sol** are the newest of their families; Astra's newest is **GPT-6 Astra** (no 6.1 Astra exists) and Luna's newest is **GPT-6 Luna**. So the table is: default GPT-6.1 Terra, planning GPT-6 Astra, most work GPT-6.1 Sol, extra-important GPT-6.1 Sol. CLI model IDs are the short form (`gpt-6.1-terra`, `gpt-6.1-sol`, `gpt-6-astra`); confirm on first dispatch, since the account's chat slugs carry a `-wm` suffix. The account's available models are the final authority; if a named model is not on his plan, the packet says so and falls back to the strongest available.
 - **Effort (Thunder's rule, Nov 11, 2026):** never **Low** on anything. **Medium is the minimum.** If a task cannot afford the model at Medium, downgrade the model rather than dropping the effort below Medium. Per task: pilot runs **Medium**; most work runs **Medium**; extra-important work runs **High**. Effort is recorded in each packet so every task carries its own spend. One honest caveat: the effort key name comes from Codex documentation, not from this CLI's help text; I confirm the accepted values on the first dispatch and correct this record if it differs.
 - **Cost note:** every Codex run draws on his ChatGPT plan allowance, shared across Codex seats. The Medium floor is the protection trade: spend the model, not the effort.
+- **Top tier and hard line (Thunder, Nov 11, 2026):** Sol can go to **xhigh** effort, but that is the rare exception, not the default; most tasks never need it. Usage hard line: the 5-hour Codex window must never go over **90%**. No dispatch may push it past 90%; if a read shows it at or over 90%, stop dispatching until the window resets, and say so in the 6pm briefing. The 5-hour and weekly usage figures are reported in the 6pm briefing from now on.
 
 ## Our feature list (claw_v17)
 
@@ -58,7 +59,9 @@ Thunder asked where I stand on model and effort before the first build. Here it 
 - No odometry, no pose. Path following and pose correction are not its ground.
 - Structural cost: its built-in opcontrol owns the sticks and applies its own input curve, so our modes, snap, and defense live in a parallel team loop (`driver_features.cpp`) while EZ's driver assists stay out of the path.
 
-### OkapiLib (legacy)
+### OkapiLib (legacy, DROPPED Nov 11, 2026)
+
+- **DROPPED altogether per Thunder, Nov 11, 2026.** No OkapiLib track runs; the notes below are the record of the evaluation only.
 
 - `ChassisControllerBuilder` with `.withMotors`, `.withDimensions` (unit literals like `3.25_in`), `.withGains`, `.withOdometry`, `.buildOdometry()`.
 - Unit-ful blocking motions (`moveDistance(24_in)`, `turnAngle(90_deg)`) and an async trapezoidal motion profiler for paths.
@@ -68,19 +71,19 @@ Thunder asked where I stand on model and effort before the first build. Here it 
 
 ### Plain PROS (the scaffold, for reference)
 
-- No library features. Fast compiled C++ runtime, motor groups, direct voltage control, IMU and encoder access. Everything is hand-rolled. It is the baseline the three libraries are measured against, not a fourth contestant.
+- No library features. Fast compiled C++ runtime, motor groups, direct voltage control, IMU and encoder access. Everything is hand-rolled. It is the baseline the two libraries are measured against, not a third contestant.
 
 ## The comparison: feature by feature, verdict per library
 
 Verdict key: **LIB** means the library provides it and we use the library's version. **TEAM** means no library provides it and it stays team code. **WRAP** means the library provides the primitive and team code wraps it to get the behavior. **GAP** means no library provides it and no clean path exists. **DROP** means deliberately not ported, by Thunder's rule.
 
-| # | Feature | LemLib | EZ-Template | OkapiLib |
+| # | Feature | LemLib | EZ-Template | OkapiLib (DROPPED) |
 |---|---|---|---|---|
 | 1 | Device map | LIB (MotorGroups, negative port = reversed) | LIB (constructor lists, negative = reversed) | LIB (`.withMotors`, gearset in `.withDimensions`) |
 | 2 | Torque 100, velocity-only | LIB (current limit pinned once; motion via chassis or `move_velocity`) | LIB with a flag (drive side is EZ's; its current behavior is library-defined, UNVERIFIED) | LIB (model commands velocity) |
 | 3 | Per-motor scales 100/100/80/80 | GAP: per-SIDE scale only; per-motor inside a side has no path through a group-commanding chassis | GAP: same, per-side only | GAP: same; `arcade()` mixes sides internally, so even per-side scaling needs model wiring at first tuning |
 | 4 | Drive direction in one place | TEAM (sign lives in team code; chassis has its own conventions) | TEAM | TEAM |
-| 5 | Two-zone drive stick curve | DROP in all three, on guardrail grounds (it is stick shaping); restoring it is Thunder's call. Note: LemLib and EZ both ship their own curves, set to linear here for the same reason | DROP | DROP |
+| 5 | Two-zone drive stick curve | DROP in both, on guardrail grounds (it is stick shaping); restoring it is Thunder's call. Note: LemLib and EZ both ship their own curves, set to linear here for the same reason | DROP | DROP |
 | 6 | Turn stick linear, capped | TEAM (turn input fed to the chassis) | TEAM | TEAM |
 | 7 | Modes 30/70 + per-mode Up/Down | TEAM (team state, applied before the chassis call) | TEAM (team state in `driver_features.cpp`, not in EZ stock opcontrol) | TEAM (team state, most direct port of the three) |
 | 8 | Per-mode adjustment, steps of 10, persist | TEAM (same as 7) | TEAM | TEAM |
@@ -99,7 +102,7 @@ Verdict key: **LIB** means the library provides it and we use the library's vers
 
 ## New capabilities the libraries add (not in our code today)
 
-| Capability | LemLib | EZ-Template | OkapiLib |
+| Capability | LemLib | EZ-Template | OkapiLib (DROPPED) |
 |---|---|---|---|
 | Odometry and pose tracking | Yes | No | Encoder-only, no IMU fusion |
 | moveToPose / pure pursuit paths | Yes | No | No |
@@ -112,25 +115,25 @@ Verdict key: **LIB** means the library provides it and we use the library's vers
 ## The porting rule (what the comparison decides)
 
 1. Where a library provides the feature, use the library's version. That is the whole point: rows 1, 2, 12, 18, 19, and 20 are library wins in at least one template, and row 18 (auton motion) is the biggest single win in the entire comparison.
-2. Where a library provides the primitive but not the behavior, team code wraps the primitive. Rows 9, 10, and 16 are wraps in all three libraries.
+2. Where a library provides the primitive but not the behavior, team code wraps the primitive. Rows 9, 10, and 16 are wraps in both libraries.
 3. Where no library provides it, it stays team code, written in the library's idiom. Rows 4, 6, 7, 8, 11, 13, 14, and 15 are team code in every template.
-4. The one structural gap: **per-motor scales inside a side (row 3) have no path in any library.** All three chassis models command motor groups, so a tune that splits L1 from L2 cannot pass through. Thunder's decision (Nov 11, 2026): **accept per-side scales.** v17's values are uniform within each side anyway, and the custom drive layer option is not pursued unless he reopens it. This is the only feature where the "library always wins" assumption does not hold.
-5. The knee map (row 5) is deliberately dropped in all three, by his rule against stick shaping. Thunder confirmed the drop Nov 11, 2026. Restoring it is his call alone.
+4. The one structural gap: **per-motor scales inside a side (row 3) have no path in any library.** Both chassis models command motor groups, so a tune that splits L1 from L2 cannot pass through. Thunder's decision (Nov 11, 2026): **accept per-side scales.** v17's values are uniform within each side anyway, and the custom drive layer option is not pursued unless he reopens it. This is the only feature where the "library always wins" assumption does not hold.
+5. The knee map (row 5) is deliberately dropped in both, by his rule against stick shaping. Thunder confirmed the drop Nov 11, 2026. Restoring it is his call alone.
 6. Library-only capabilities (the last table) are not adopted by default. They are options the pick unlocks, and each one is its own later packet with its own proof, never bundled into the port.
 
 ## How the parallel sequences are managed (Thunder's call, Nov 11)
 
-His ruling: during conversion, all three tracks carry the same traits; after the conversion phase ends, each is handled separately. The management spine that makes that true by construction:
+His ruling: during conversion, both tracks carry the same traits; after the conversion phase ends, each is handled separately. The management spine that makes that true by construction:
 
 - **One shared parity spec:** this document plus the v17 feature list is the single source of truth every track reads. Traits stay identical because they are read from one place, not because three tracks are checked against each other afterward.
-- **One branch and one loop per template:** branches `codex/pros-<template>-parity` then `codex/pros-<template>-slew`; loops CX-12 (LemLib), CX-13 (EZ), CX-14 (Okapi) in `OPEN_LOOPS.md`, each with its own named proof. No cross-merging between tracks at any point.
+- **One branch and one loop per template:** branches `codex/pros-<template>-parity` then `codex/pros-<template>-slew`; loops CX-12 (LemLib), CX-13 (EZ) in `OPEN_LOOPS.md`, each with its own named proof. CX-14 (Okapi) was dropped Nov 11, 2026. No cross-merging between tracks at any point.
 - **Working surface (Thunder, Nov 11):** the three agents work inside the shared cloud environment while they build, editing there as they go, and each pushes its track to GitHub at the end. The cloud env is the shared construction site; the repo is where finished tracks land.
-- **One convergence point:** the comparison table at the end, scored on the same criteria for all three, and then his pick. The unpicked branches stay built on disk.
+- **One convergence point:** the comparison table at the end, scored on the same criteria for both, and then his pick. The unpicked branches stay built on disk.
 - **After conversion:** each line is managed separately (own branch, own loop, own tune values). The shared spec stops being the authority the day he picks, and the picked line's own docs take over.
 
 ## What is still unproven (applies to every row above)
 
 - No library API name in this document is verified against installed headers. Nothing here has compiled. The first build in the cloud environment settles name drift, and the drift fixes stay local to the construction site in each variant.
-- Track width is a placeholder (11.5 in, MEASURE ME) in the LemLib and Okapi variants; v17 never recorded it.
-- No drive, snap, or heading claim stands in any template until the wheels-up test and the by-hand IMU heading check pass. DRIVE_SIGN is UNVERIFIED on the PROS side in all three.
-- Defense return velocity in all three variants is still v17's 60; v18's 40 is one config line in each.
+- Track width is a placeholder (11.5 in, MEASURE ME) in the LemLib variant; v17 never recorded it.
+- No drive, snap, or heading claim stands in any template until the wheels-up test and the by-hand IMU heading check pass. DRIVE_SIGN is UNVERIFIED on the PROS side in either.
+- Defense return velocity in both variants is still v17's 60; v18's 40 is one config line in each.
