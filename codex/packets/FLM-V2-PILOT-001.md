@@ -37,7 +37,7 @@ Confirm the base matches the packet before starting. If it differs, stop and rep
 The Robotics Code Work chat verifies after the run:
 
 - The diff against base is exactly one line in each file: `DEFENSE_RETURN_VEL = 60.0` becomes `DEFENSE_RETURN_VEL = 40.0`, in the .py and at the same spot inside the wrapper textContent.
-- Validation standard on both outputs: ast.parse clean, no duplicate top-level defs, exactly one `imu = Inertial`, exactly one `#endregion`, robotConfig count 11.
+- Validation standard, scoped per file. The .py: ast.parse clean, no duplicate top-level defs, exactly one `imu = Inertial`. The .v5python: exactly one `#endregion`, robotConfig count 11. The `#endregion` and robotConfig checks apply to the wrapper only. The .py carries zero `#endregion` markers; its `#region` opener on line 1 is unclosed, pre-existing, and out of scope for this run.
 - The run log is complete: every action logged per `PROCEDURE.md`, frontmatter status done, no gaps.
 - The known v18 pair stays as the comparison for the diff review.
 
