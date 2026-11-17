@@ -28,7 +28,7 @@ The map of this lane. Every file Codex may meet, what it holds, and how it conne
     input/  work/  output/  report/
 ```
 
-On the cloud route, the claw series lives in the GitHub repo (thunder-mythos/pinnacle-robot-claw) and this harness ships with it: AGENTS.md at the claw folder root, the rest alongside. The local tree above stays the working mirror.
+On the cloud route, the claw series lives in the GitHub repo (thunder-mythos/pinnacle-robot-claw) and this harness ships with it: AGENTS.md at the claw folder root, the rest alongside. The local tree above stays the working mirror. In the one-way kit (pros-conversion-kit.zip) the PROS material ships under `pros/`, the harness under `harness/`, the packets under `packets/`, and the v17 base under `base/`.
 
 ## The claw series (the code itself)
 
@@ -37,11 +37,11 @@ On the cloud route, the claw series lives in the GitHub repo (thunder-mythos/pin
 - **Current state:** v17 is the delivered version (chat plus Drive). v18 exists locally only, one line different (DEFENSE_RETURN_VEL 40.0), awaiting Thunder's push-or-kill. Details and the full device map are in `CONTEXT.md`.
 - **claw_v1_notes.md** is history from the first rebuild, kept for provenance. It contains values from before the no-guesses rule; never source a value from it.
 
-## The PROS side (preparation, not adopted)
+## The PROS side (switch called Nov 17, 2026)
 
-- **pros-scaffold/** is a plain PROS C++ project that mirrors claw_v17 feature by feature (kernel 4.2.0; src: main, robot_config, drive, driver, mechanisms, auton; include: config.hpp, robot.hpp, main.h). It exists so a PROS switch, if Thunder calls it, starts from a port instead of a blank page. It has never been compiled against a real PROS kernel on this machine and has never run on a brain.
-- **pros-templates/** holds two public template projects (ez-template, lemlib), each a full PROS project tree. They are candidate bases for the movement layer, to be built as separate branches and compared if the switch is called. None is adopted; none outranks the plain scaffold until Thunder picks. (OkapiLib was a third candidate, dropped Nov 11, 2026.)
-- **pros-transition-protocol.md** is the adoption plan: step order, the validation standard per step, and where Thunder's gates sit. It executes only on his call.
+- **pros-scaffold/** is a plain PROS C++ project that mirrors claw_v17 feature by feature (kernel 4.2.0; src: main, robot_config, drive, driver, mechanisms, auton; include: config.hpp, robot.hpp, main.h). It is the reference port the template tracks read; the switch is called, so it is live material now, not preparation. It has never been compiled against a real PROS kernel on this machine and has never run on a brain.
+- **pros-templates/** holds two public template projects (ez-template, lemlib), each a full PROS project tree. They are the bases for the two parity ports (packets FLM-V2-PROS-EZ-001 and FLM-V2-PROS-LEMLIB-001), built as separate branches and compared. None is adopted until Thunder picks. (OkapiLib was a third candidate, dropped Nov 11, 2026.)
+- **pros-transition-protocol.md** is the adoption plan: step order, the validation standard per step, and where Thunder's gates sit. It executes on his call, which came Nov 17, 2026.
 - **pros-movement-research.md** is the evidence base for the movement work: why PROS bots look smooth (library slew limiting first, then PID with settle exits, then chaining and stick curves, then hardware), what is replicable in the current Python stack, and what genuinely needs PROS. Read it before any movement-related packet.
 
 ## The harness folder (codex/)

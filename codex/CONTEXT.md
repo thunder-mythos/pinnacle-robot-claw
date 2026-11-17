@@ -10,9 +10,9 @@ Read after AGENTS.md. This is where things stand, what the team is trying to do,
 
 **The open sensor problem.** Snap turns spun multiple revolutions on hardware under both turn signs. The standing read is that the IMU heading value may not be changing at all while the robot rotates. Two physical tests gate everything in that area and neither has been reported done: rotating the bot by hand and watching the heading value move, and a wheels-up test confirming forward is forward. Until they pass, drive direction, snap turns, and heading hold are unproven, in this stack and any other.
 
-**The Codex route.** Thunder confirmed Cloud plus CLI dispatch on Nov 10, 2026: Corvin dispatches cloud tasks from the VM's Codex CLI once it is signed in by device auth, Thunder watches and steers in his ChatGPT desktop app, and GitHub (thunder-mythos/pinnacle-robot-claw) is the home for the claw series. The sequence from here: VM sign-in first, then commit the claw series into the repo, then Thunder publishes the cloud environment, then the pilot (FLM-V2-PILOT-001, the v18 reproduction, re-aimed to a commit-based proof) fires. Setup is done to the login wall; sign-in has not happened.
+**The Codex route.** One-way, Thunder drives. The Cloud plus CLI dispatch route from Nov 10 is dead (the CLI cannot see the new-flow environments) and is kept as a non-default route, not deleted. Thunder runs Codex in cloud task threads in the web app and pastes the prompt; Corvin verifies the handback. GitHub (thunder-mythos/pinnacle-robot-claw) is the home for the claw series. The pilot (FLM-V2-PILOT-001) passed Nov 17, 2026, accepted on GPT-6 Sol with the model deviation documented. The two PROS conversion tracks fire next from the same one-way route.
 
-**PROS.** The switch is undecided. Thunder's word: the code is likely heading toward PROS and more comes from him later. Preparation exists (plain scaffold mirroring v17, two template variants, a transition protocol) so the call, if it comes, is execution rather than research. (OkapiLib was a third variant, dropped Nov 11, 2026.) The Python claw series remains the competition code until he says otherwise.
+**PROS.** The switch was called Nov 17, 2026. Two conversion tracks are firing: EZ-Template parity (FLM-V2-PROS-EZ-001, CX-13) and LemLib parity (FLM-V2-PROS-LEMLIB-001, CX-12), both porting v17, parity only, slew as the follow-up packet per track. (OkapiLib was a third variant, dropped Nov 11, 2026.) The Python claw series remains the competition code until he picks a PROS line after the comparison.
 
 **The season clock.** The team's path runs through the JROTC National Championship in Reno, NV (Mar 6 to 7, 2027), qualifying toward RECF Worlds in St. Louis (Apr 27 to May 6, 2027). Code decisions are made against that clock: nothing unproven rides to Reno.
 
@@ -46,5 +46,5 @@ How they work together: build changes wiring, wiring reaches the programmer, the
 - Whether the IMU heading value changes when the robot rotates (by-hand check, not done).
 - Whether forward command is forward on the current wiring (wheels-up test, not done; the drive sign in code is UNTESTED).
 - Every defense-mode value, the one-inch auton lift raise, and the per-mode drive values are UNTESTED on hardware until Thunder reports runs.
-- Where a real PROS compile will live when the switch is called (this VM has no PROS toolchain or ARM cross-compiler; the cloud environment question is open with it).
-- Whether v18 gets pushed or killed, and whether PROS gets called at all. Both are Thunder's, and silence on either means not yet.
+- Where a real PROS compile lives: the published cloud environment (PROS 4.2.1 sample compiled there during setup Nov 12). This VM has no PROS toolchain or ARM cross-compiler, so nothing compiles here.
+- Whether v18 gets pushed or killed. Thunder's call, and silence means not yet. PROS is called as of Nov 17, 2026.
